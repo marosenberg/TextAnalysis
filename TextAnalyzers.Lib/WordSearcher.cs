@@ -21,16 +21,7 @@ namespace TextAnalyzers.Lib
 
         public int GetWordCount(string searchText, bool isCaseSensitive = true)
         {
-            StringComparison scomp = isCaseSensitive ? StringComparison.InvariantCulture :
-                StringComparison.InvariantCultureIgnoreCase;
-            int count = 0;
-            int ndx =Document.IndexOf(searchText, scomp);
-            while (ndx >= 0)
-            {
-                count++;
-                ndx = Document.IndexOf(searchText, ndx + searchText.Length, scomp);
-            }
-            return count;
+            return Search(searchText, isCaseSensitive).Count();
         }
         public static WordSearcher FromFile(string filePath)
         {
@@ -39,6 +30,28 @@ namespace TextAnalyzers.Lib
                 throw new ArgumentException($"File not found: {filePath}");
             }
             return new WordSearcher(File.ReadAllText(filePath));
+        }
+
+        public IEnumerable<WordLocation> Search(string searchText, bool isCaseSensitive = true)
+        {
+            StringComparison scomp = isCaseSensitive ? StringComparison.InvariantCulture :
+               StringComparison.InvariantCultureIgnoreCase;
+            int order = 1, ndx = Document.IndexOf(searchText, scomp);
+            while (ndx >= 0)
+            {
+                yield return new WordLocation
+                {
+                    Word = searchText,
+                    Location = ndx,
+                    FoundOrder = order++
+                };
+                ndx = Document.IndexOf(searchText, ndx + searchText.Length, scomp);
+            }
+        }
+
+        public Task<IEnumerable<WordLocation>> SearchAsync(string searchText, bool isCaseSensitive=true)
+        {
+            return Task<IEnumerable<WordLocation>>.Factory.StartNew(() => Search(searchText, isCaseSensitive));
         }
     }
 }
